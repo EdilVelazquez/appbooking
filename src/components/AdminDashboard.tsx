@@ -1,159 +1,100 @@
-import React, { useState } from 'react';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Calendar as CalendarIcon, List, XCircle } from 'lucide-react';
-import { useAuthStore } from '../store/useAuthStore';
-import { useReservationStore } from '../store/useReservationStore';
+import { RoomList } from './admin/RoomList';
 import { AdminCalendar } from './AdminCalendar';
+import { ReservationList } from './admin/ReservationList';
+import { FinanceList } from './admin/FinanceList';
+import { LogOut, Calendar, List, BedDouble, DollarSign } from 'lucide-react';
+
+type Tab = 'calendar' | 'list' | 'rooms' | 'finance';
 
 export const AdminDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<Tab>('rooms');
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
-  const { reservations, rooms, cancelReservation } = useReservationStore();
-  const [view, setView] = useState<'list' | 'calendar'>('list');
+
+  useEffect(() => {
+    const isAuthenticated = sessionStorage.getItem('adminAuthenticated');
+    if (!isAuthenticated) {
+      navigate('/admin/login');
+    }
+  }, [navigate]);
 
   const handleLogout = () => {
-    logout();
-    navigate('/');
+    sessionStorage.removeItem('adminAuthenticated');
+    navigate('/admin/login');
   };
-
-  const handleCancelReservation = async (id: number) => {
-    try {
-      await cancelReservation(id);
-      alert('Reservation cancelled successfully');
-    } catch (error) {
-      alert('Failed to cancel reservation');
-    }
-  };
-
-  const sortedReservations = [...reservations].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Reservation Management</h1>
-        <div className="flex items-center space-x-4">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
             <button
-              onClick={() => setView('list')}
-              className={`flex items-center px-3 py-1 rounded ${
-                view === 'list'
-                  ? 'bg-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={handleLogout}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
             >
-              <List className="w-4 h-4 mr-1" />
-              List
-            </button>
-            <button
-              onClick={() => setView('calendar')}
-              className={`flex items-center px-3 py-1 rounded ${
-                view === 'calendar'
-                  ? 'bg-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <CalendarIcon className="w-4 h-4 mr-1" />
-              Calendar
+              <LogOut className="w-4 h-4 mr-2" />
+              Cerrar Sesión
             </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center px-4 py-2 text-gray-700 hover:text-gray-900"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </button>
+          <div className="flex space-x-4 pb-4">
+            <button
+              onClick={() => setActiveTab('rooms')}
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === 'rooms'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <BedDouble className="w-5 h-5 mr-2" />
+              Habitaciones
+            </button>
+            <button
+              onClick={() => setActiveTab('calendar')}
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === 'calendar'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Calendar className="w-5 h-5 mr-2" />
+              Calendario
+            </button>
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <List className="w-5 h-5 mr-2" />
+              Reservaciones
+            </button>
+            <button
+              onClick={() => setActiveTab('finance')}
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === 'finance'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <DollarSign className="w-5 h-5 mr-2" />
+              Finanzas
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {view === 'list' ? (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Guest Details
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Room
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Dates
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedReservations.map((reservation) => {
-                  const room = rooms.find((r) => r.id === reservation.roomId);
-                  return (
-                    <tr key={reservation.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {reservation.guestName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {reservation.email}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {reservation.phone}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{room?.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {reservation.numberOfGuests} guests
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {format(new Date(reservation.checkIn), 'MMM d, yyyy')} -
-                          {format(new Date(reservation.checkOut), 'MMM d, yyyy')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            reservation.status === 'confirmed'
-                              ? 'bg-green-100 text-green-800'
-                              : reservation.status === 'cancelled'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {reservation.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {reservation.status !== 'cancelled' && (
-                          <button
-                            onClick={() => handleCancelReservation(reservation.id)}
-                            className="flex items-center text-red-600 hover:text-red-900"
-                          >
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Cancel
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <AdminCalendar />
-      )}
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {activeTab === 'rooms' && <RoomList />}
+        {activeTab === 'calendar' && <AdminCalendar />}
+        {activeTab === 'list' && <ReservationList />}
+        {activeTab === 'finance' && <FinanceList />}
+      </main>
     </div>
   );
 };
